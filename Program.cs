@@ -35,8 +35,15 @@ namespace vscProjects
             int packetId;
             short objectAmount = -1;
 
-            byte[] idBuffer = new byte[4];
-            byte[] amountBuffer = new byte[2];
+            int objectId;
+            int nameId;
+            short posX;
+            short posY;
+
+            bool IsLittleEndian = BitConverter.IsLittleEndian;
+
+            byte[] shortBuffer = new byte[2];
+            byte[] intBuffer = new byte[4];
 
             while (listening)
             {
@@ -49,36 +56,70 @@ namespace vscProjects
                     reader = new BinaryReader(stream);
 
                     for(int i = 0; i < 4; i++) {
-                        idBuffer[i] = reader.ReadByte();
+                        intBuffer[i] = reader.ReadByte();
                     }
-                    if(BitConverter.IsLittleEndian) {
-                        Array.Reverse(idBuffer);
+                    if(IsLittleEndian) {
+                        Array.Reverse(intBuffer);
                     }
-                    packetId = BitConverter.ToInt32(idBuffer, 0);
+                    packetId = BitConverter.ToInt32(intBuffer, 0);
 
                     if(packetId > lastPacketId) {
                         lastPacketId = packetId;
 
                         for(int i = 0; i < 2; i++) {
-                            amountBuffer[i] = reader.ReadByte();
+                            shortBuffer[i] = reader.ReadByte();
                         }
-                        if(BitConverter.IsLittleEndian) {
-                            Array.Reverse(amountBuffer);
+                        if(IsLittleEndian) {
+                            Array.Reverse(shortBuffer);
                         }
-                        objectAmount = BitConverter.ToInt16(amountBuffer, 0);
+                        objectAmount = BitConverter.ToInt16(shortBuffer, 0);
+
+                        Console.WriteLine($"{receiveEndPoint}>> pakcet length: {bytes.Length}");
+                        Console.WriteLine($"{receiveEndPoint}>> packetID:      {packetId}");
+                        Console.WriteLine($"{receiveEndPoint}>> object amount: {objectAmount}");
 
                         for(int i = 0; i < objectAmount; i++) {
-                            Console.WriteLine("Object " + i + " created!");
+                            // Object ID
+                            for(int j = 0; j < 4; j++) {
+                                intBuffer[j] = reader.ReadByte();
+                            }
+                            if(IsLittleEndian) {
+                                Array.Reverse(intBuffer);    
+                            }
+                            objectId = BitConverter.ToInt32(intBuffer, 0);
+                            // Name ID
+                            for(int j = 0; j < 4; j++) {
+                                intBuffer[j] = reader.ReadByte();
+                            }
+                            if(IsLittleEndian) {
+                                Array.Reverse(intBuffer);    
+                            }
+                            nameId = BitConverter.ToInt32(intBuffer, 0);
+                            // Position X and Y
+                            for(int j = 0; j < 2; j++) {
+                                shortBuffer[j] = reader.ReadByte();
+                            }
+                            if(IsLittleEndian) {
+                                Array.Reverse(shortBuffer);
+                            }
+                            posX = BitConverter.ToInt16(shortBuffer, 0);
+
+                            for(int j = 0; j < 2; j++) {
+                                shortBuffer[j] = reader.ReadByte();
+                            }
+                            if(IsLittleEndian) {
+                                Array.Reverse(shortBuffer);
+                            }
+                            posY = BitConverter.ToInt16(shortBuffer, 0);
+
+                            Console.WriteLine($"{receiveEndPoint}>> objectID: {objectId}");
+                            Console.WriteLine($"{receiveEndPoint}>> nameID:   {nameId}");
+                            Console.WriteLine($"{receiveEndPoint}>> posX:     {posX}");
+                            Console.WriteLine($"{receiveEndPoint}>> posY:     {posY}\n");
                         }
 
                     } else {
                         Console.WriteLine("Old packet dropped.");
-                    }
-
-                    Console.WriteLine($"{receiveEndPoint}>> {bytes.Length}");
-                    Console.WriteLine($"{receiveEndPoint}>> {packetId}");
-                    if(objectAmount > 0) {
-                        Console.WriteLine($"{receiveEndPoint}>> {objectAmount}");
                     }
                 }
                 catch (Exception e)
